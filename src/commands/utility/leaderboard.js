@@ -1,17 +1,17 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import User from '../../models/User.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('leaderboard')
-    .setDescription('Show the server leaderboard'),
+  name: 'leaderboard',
+  description: 'Show the server leaderboard',
+  usage: '²leaderboard',
 
-  async execute(interaction) {
-    const users = await User.find({ guildId: interaction.guild.id })
+  async execute(message, args, client) {
+    const users = await User.find({ guildId: message.guild.id })
       .sort({ level: -1, xp: -1 })
       .limit(10);
 
-    if (!users.length) return interaction.reply({ content: 'No users found.', ephemeral: true });
+    if (!users.length) return message.reply({ content: 'No users found.' });
 
     const medals = ['🥇', '🥈', '🥉'];
     const description = users.map((u, i) =>
@@ -22,9 +22,9 @@ export default {
       .setColor(0xf1c40f)
       .setTitle('🏆 Server Leaderboard')
       .setDescription(description)
-      .setFooter({ text: `${interaction.guild.name}`, iconURL: interaction.guild.iconURL() })
+      .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
