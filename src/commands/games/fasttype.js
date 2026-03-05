@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 const sentences = [
   'The quick brown fox jumps over the lazy dog',
@@ -9,11 +9,11 @@ const sentences = [
 ];
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('fasttype')
-    .setDescription('Type the sentence as fast as possible!'),
+  name: 'fasttype',
+  description: 'Type the sentence as fast as possible',
+  usage: '²fasttype',
 
-  async execute(interaction) {
+  async execute(message, args, client) {
     const sentence = sentences[Math.floor(Math.random() * sentences.length)];
 
     const embed = new EmbedBuilder()
@@ -22,11 +22,10 @@ export default {
       .setDescription(`Type this sentence as fast as you can:\n\n\`\`\`${sentence}\`\`\``)
       .setFooter({ text: 'You have 30 seconds!' });
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
 
-    const filter = m => m.author.id === interaction.user.id;
-    const collector = interaction.channel.createMessageCollector({ filter, time: 30000, max: 1 });
-
+    const filter = m => m.author.id === message.author.id;
+    const collector = message.channel.createMessageCollector({ filter, time: 30000, max: 1 });
     const start = Date.now();
 
     collector.on('collect', async m => {
@@ -41,13 +40,11 @@ export default {
           : `❌ Wrong! The correct sentence was:\n\`\`\`${sentence}\`\`\``)
         .setTimestamp();
 
-      await interaction.followUp({ embeds: [result] });
+      await message.channel.send({ embeds: [result] });
     });
 
-    collector.on('end', (collected) => {
-      if (collected.size === 0) {
-        interaction.followUp({ content: '⏰ Time is up! You did not type the sentence in time.' });
-      }
+    collector.on('end', collected => {
+      if (collected.size === 0) message.channel.send('⏰ Time is up!');
     });
   }
 };
