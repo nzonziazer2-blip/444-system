@@ -6,6 +6,8 @@ import { loadEvents } from './src/handlers/eventHandler.js';
 
 dotenv.config();
 
+export const PREFIX = '²';
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,7 +22,6 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 10000,
   family: 4
@@ -28,9 +29,7 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// Load commands and events
 await loadCommands(client);
 await loadEvents(client);
 
-// Login
 client.login(process.env.DISCORD_TOKEN);
