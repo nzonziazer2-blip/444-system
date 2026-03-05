@@ -1,11 +1,11 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('rps')
-    .setDescription('Play Rock Paper Scissors'),
+  name: 'rps',
+  description: 'Play Rock Paper Scissors',
+  usage: '²rps',
 
-  async execute(interaction) {
+  async execute(message, args, client) {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('rps_rock').setLabel('🪨 Rock').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('rps_paper').setLabel('📄 Paper').setStyle(ButtonStyle.Primary),
@@ -17,6 +17,6 @@ export default {
       .setTitle('🎮 Rock Paper Scissors')
       .setDescription('Choose your move!');
 
-    await interaction.reply({ embeds: [embed], components: [row] });
+    await message.reply({ embeds: [embed], components: [row] });
   }
 };
