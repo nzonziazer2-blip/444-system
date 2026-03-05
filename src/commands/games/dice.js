@@ -1,13 +1,12 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('dice')
-    .setDescription('Roll a dice')
-    .addIntegerOption(opt => opt.setName('sides').setDescription('Number of sides (default 6)').setMinValue(2).setMaxValue(100)),
+  name: 'dice',
+  description: 'Roll a dice',
+  usage: '²dice [sides]',
 
-  async execute(interaction) {
-    const sides = interaction.options.getInteger('sides') || 6;
+  async execute(message, args, client) {
+    const sides = parseInt(args[0]) || 6;
     const result = Math.floor(Math.random() * sides) + 1;
 
     const embed = new EmbedBuilder()
@@ -16,6 +15,6 @@ export default {
       .setDescription(`You rolled a **${result}** out of **${sides}**!`)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
