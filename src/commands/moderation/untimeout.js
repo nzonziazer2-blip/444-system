@@ -1,20 +1,22 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('untimeout')
-    .setDescription('Remove timeout from a member')
-    .addUserOption(opt => opt.setName('user').setDescription('The user to untimeout').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+  name: 'untimeout',
+  description: 'Remove timeout from a member',
+  usage: '²untimeout @user',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user');
-    const member = interaction.guild.members.cache.get(target.id);
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers))
+      return message.reply({ embeds: [errorEmbed('Error', 'You don\'t have permission!')] });
 
-    if (!member) return interaction.reply({ embeds: [errorEmbed('Error', 'User not found.')], ephemeral: true });
+    const target = message.mentions.users.first();
+    if (!target) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a user!')] });
+
+    const member = message.guild.members.cache.get(target.id);
+    if (!member) return message.reply({ embeds: [errorEmbed('Error', 'User not found.')] });
 
     await member.timeout(null);
-    await interaction.reply({ embeds: [successEmbed('Timeout Removed', `${target}'s timeout has been removed.`)] });
+    await message.reply({ embeds: [successEmbed('Timeout Removed', `${target}'s timeout has been removed.`)] });
   }
 };
