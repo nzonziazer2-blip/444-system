@@ -1,11 +1,11 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('fastclick')
-    .setDescription('Click the button as fast as possible!'),
+  name: 'fastclick',
+  description: 'Click the button as fast as possible',
+  usage: '²fastclick',
 
-  async execute(interaction) {
+  async execute(message, args, client) {
     const embed = new EmbedBuilder()
       .setColor(0xe74c3c)
       .setTitle('🖱️ Fast Click!')
@@ -19,8 +19,7 @@ export default {
         .setDisabled(true)
     );
 
-    await interaction.reply({ embeds: [embed], components: [waitRow] });
-
+    const sent = await message.reply({ embeds: [embed], components: [waitRow] });
     const delay = Math.floor(Math.random() * 4000) + 2000;
 
     setTimeout(async () => {
@@ -29,14 +28,13 @@ export default {
           .setCustomId('fastclick_go')
           .setLabel('🟢 CLICK NOW!')
           .setStyle(ButtonStyle.Success)
-          .setDisabled(false)
       );
 
       const start = Date.now();
-      await interaction.editReply({ components: [goRow] });
+      await sent.edit({ components: [goRow] });
 
-      const collector = interaction.channel.createMessageComponentCollector({
-        filter: i => i.customId === 'fastclick_go' && i.user.id === interaction.user.id,
+      const collector = message.channel.createMessageComponentCollector({
+        filter: i => i.customId === 'fastclick_go' && i.user.id === message.author.id,
         time: 5000,
         max: 1
       });
@@ -57,9 +55,7 @@ export default {
       });
 
       collector.on('end', collected => {
-        if (collected.size === 0) {
-          interaction.editReply({ content: '⏰ Too slow!', components: [] });
-        }
+        if (collected.size === 0) sent.edit({ content: '⏰ Too slow!', components: [] });
       });
     }, delay);
   }
