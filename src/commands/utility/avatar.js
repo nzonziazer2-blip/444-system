@@ -1,13 +1,12 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('avatar')
-    .setDescription('Get avatar of a user')
-    .addUserOption(opt => opt.setName('user').setDescription('User').setRequired(false)),
+  name: 'avatar',
+  description: 'Get avatar of a user',
+  usage: '²avatar @user',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user') || interaction.user;
+  async execute(message, args, client) {
+    const target = message.mentions.users.first() || message.author;
 
     const embed = new EmbedBuilder()
       .setColor(0x3498db)
@@ -18,6 +17,6 @@ export default {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
