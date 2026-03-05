@@ -1,12 +1,12 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('stats')
-    .setDescription('Show server statistics'),
+  name: 'stats',
+  description: 'Show server statistics',
+  usage: '²stats',
 
-  async execute(interaction) {
-    const guild = interaction.guild;
+  async execute(message, args, client) {
+    const guild = message.guild;
     await guild.members.fetch();
 
     const totalMembers = guild.memberCount;
@@ -40,6 +40,6 @@ export default {
       .setFooter({ text: `ID: ${guild.id}` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
