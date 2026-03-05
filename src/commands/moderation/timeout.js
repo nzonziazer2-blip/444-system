@@ -1,59 +1,52 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import Guild from '../../models/Guild.js';
 import User from '../../models/User.js';
 import { sendLog, successEmbed, errorEmbed, logEmbed } from '../../utils/helpers.js';
 
 const durations = {
-  '60': 60 * 1000,
-  '300': 5 * 60 * 1000,
-  '600': 10 * 60 * 1000,
-  '3600': 60 * 60 * 1000,
-  '86400': 24 * 60 * 60 * 1000,
-  '604800': 7 * 24 * 60 * 60 * 1000,
+  '1m': 60 * 1000,
+  '5m': 5 * 60 * 1000,
+  '10m': 10 * 60 * 1000,
+  '1h': 60 * 60 * 1000,
+  '1d': 24 * 60 * 60 * 1000,
+  '1w': 7 * 24 * 60 * 60 * 1000,
 };
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('timeout')
-    .setDescription('Timeout a member')
-    .addUserOption(opt => opt.setName('user').setDescription('The user to timeout').setRequired(true))
-    .addStringOption(opt => opt.setName('duration').setDescription('Duration').setRequired(true)
-      .addChoices(
-        { name: '1 minute', value: '60' },
-        { name: '5 minutes', value: '300' },
-        { name: '10 minutes', value: '600' },
-        { name: '1 hour', value: '3600' },
-        { name: '1 day', value: '86400' },
-        { name: '1 week', value: '604800' },
-      ))
-    .addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(false))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+  name: 'timeout',
+  description: 'Timeout a member',
+  usage: '²timeout @user [1m/5m/10m/1h/1d/1w] [reason]',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user');
-    const durationKey = interaction.options.getString('duration');
-    const reason = interaction.options.getString('reason') || 'No reason provided';
-    const member = interaction.guild.members.cache.get(target.id);
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers))
+      return message.reply({ embeds: [errorEmbed('Error', 'You don\'t have permission!')] });
+
+    const target = message.mentions.users.first();
+    if (!target) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a user!')] });
+
+    const durationKey = args[1];
     const ms = durations[durationKey];
+    if (!ms) return message.reply({ embeds: [errorEmbed('Error', 'Invalid duration! Use: `1m` `5m` `10m` `1h` `1d` `1w`')] });
 
-    if (!member) return interaction.reply({ embeds: [errorEmbed('Error', 'User not found.')], ephemeral: true });
-    if (!member.moderatable) return interaction.reply({ embeds: [errorEmbed('Error', 'I cannot timeout this user.')], ephemeral: true });
+    const reason = args.slice(2).join(' ') || 'No reason provided';
+    const member = message.guild.members.cache.get(target.id);
+
+    if (!member) return message.reply({ embeds: [errorEmbed('Error', 'User not found.')] });
+    if (!member.moderatable) return message.reply({ embeds: [errorEmbed('Error', 'I cannot timeout this user.')] });
 
     await member.timeout(ms, reason);
-
-    const durationLabel = Object.keys(durations).find(k => k === durationKey);
-    await interaction.reply({ embeds: [successEmbed('Member Timed Out', `${target} has been timed out.\n**Duration:** ${durationKey}s\n**Reason:** ${reason}`)] });
+    await message.reply({ embeds: [successEmbed('Member Timed Out', `${target} has been timed out for **${durationKey}**.\n**Reason:** ${reason}`)] });
 
     await User.findOneAndUpdate(
-      { userId: target.id, guildId: interaction.guild.id },
-      { $push: { timeouts: { reason, moderator: interaction.user.id, duration: `${durationKey}s` } } },
+      { userId: target.id, guildId: message.guild.id },
+      { $push: { timeouts: { reason, moderator: message.author.id, duration: durationKey } } },
       { upsert: true }
     );
 
-    const guildData = await Guild.findOne({ guildId: interaction.guild.id });
+    const guildData = await Guild.findOne({ guildId: message.guild.id });
     if (guildData?.timeoutLogsChannel) {
-      const log = logEmbed('⏱️ Member Timed Out', `**User:** ${target} (${target.id})\n**Moderator:** ${interaction.user}\n**Duration:** ${durationKey}s\n**Reason:** ${reason}`, 0x9b59b6);
-      await sendLog(interaction.guild, guildData.timeoutLogsChannel, log);
+      const log = logEmbed('⏱️ Member Timed Out', `**User:** ${target} (${target.id})\n**Moderator:** ${message.author}\n**Duration:** ${durationKey}\n**Reason:** ${reason}`, 0x9b59b6);
+      await sendLog(message.guild, guildData.timeoutLogsChannel, log);
     }
   }
 };
