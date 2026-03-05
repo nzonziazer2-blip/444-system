@@ -1,31 +1,28 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import User from '../../models/User.js';
+import { errorEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('roulette')
-    .setDescription('Bet your coins on roulette')
-    .addIntegerOption(opt => opt.setName('amount').setDescription('Amount to bet').setRequired(true).setMinValue(1))
-    .addStringOption(opt => opt.setName('color').setDescription('red or black').setRequired(true)
-      .addChoices(
-        { name: '🔴 Red', value: 'red' },
-        { name: '⚫ Black', value: 'black' }
-      )),
+  name: 'roulette',
+  description: 'Bet your coins on roulette',
+  usage: '²roulette [amount] [red/black]',
 
-  async execute(interaction) {
-    const amount = interaction.options.getInteger('amount');
-    const color = interaction.options.getString('color');
+  async execute(message, args, client) {
+    const amount = parseInt(args[0]);
+    const color = args[1]?.toLowerCase();
 
-    const userData = await User.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
-    if (!userData || userData.coins < amount) {
-      return interaction.reply({ content: '❌ You don\'t have enough coins!', ephemeral: true });
-    }
+    if (!amount || amount < 1) return message.reply({ embeds: [errorEmbed('Error', 'Please provide a valid amount!')] });
+    if (!['red', 'black'].includes(color)) return message.reply({ embeds: [errorEmbed('Error', 'Choose `red` or `black`!')] });
+
+    const userData = await User.findOne({ userId: message.author.id, guildId: message.guild.id });
+    if (!userData || userData.coins < amount)
+      return message.reply({ content: '❌ You don\'t have enough coins!' });
 
     const spin = Math.random() < 0.5 ? 'red' : 'black';
     const won = spin === color;
 
     await User.findOneAndUpdate(
-      { userId: interaction.user.id, guildId: interaction.guild.id },
+      { userId: message.author.id, guildId: message.guild.id },
       { $inc: { coins: won ? amount : -amount } }
     );
 
@@ -35,6 +32,6 @@ export default {
       .setDescription(`The wheel landed on **${spin === 'red' ? '🔴 Red' : '⚫ Black'}**!\n\n${won ? `✅ You won **${amount}** coins!` : `❌ You lost **${amount}** coins!`}`)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
