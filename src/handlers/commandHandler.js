@@ -13,9 +13,9 @@ export async function loadCommands(client) {
     for (const file of files) {
       const filePath = pathToFileURL(join(commandsPath, folder, file)).href;
       const command = await import(filePath);
-      if (command.default?.data && command.default?.execute) {
-        client.commands.set(command.default.data.name, command.default);
-        console.log(`✅ Command loaded: ${command.default.data.name}`);
+      if (command.default?.name && command.default?.execute) {
+        client.commands.set(command.default.name, command.default);
+        console.log(`✅ Command loaded: ${command.default.name}`);
       }
     }
   }
