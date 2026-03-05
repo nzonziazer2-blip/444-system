@@ -1,31 +1,31 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import Guild from '../../models/Guild.js';
 import { sendLog, successEmbed, errorEmbed, logEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('ban')
-    .setDescription('Ban a member from the server')
-    .addUserOption(opt => opt.setName('user').setDescription('The user to ban').setRequired(true))
-    .addStringOption(opt => opt.setName('reason').setDescription('Reason for the ban').setRequired(false))
-    .addIntegerOption(opt => opt.setName('days').setDescription('Delete messages from last X days (0-7)').setMinValue(0).setMaxValue(7))
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+  name: 'ban',
+  description: 'Ban a member',
+  usage: '²ban @user [reason]',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || 'No reason provided';
-    const days = interaction.options.getInteger('days') || 0;
-    const member = interaction.guild.members.cache.get(target.id);
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.BanMembers))
+      return message.reply({ embeds: [errorEmbed('Error', 'You don\'t have permission!')] });
 
-    if (member && !member.bannable) return interaction.reply({ embeds: [errorEmbed('Error', 'I cannot ban this user.')], ephemeral: true });
+    const target = message.mentions.users.first();
+    if (!target) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a user!')] });
 
-    await interaction.guild.members.ban(target.id, { reason, deleteMessageDays: days });
-    await interaction.reply({ embeds: [successEmbed('Member Banned', `${target} has been banned.\n**Reason:** ${reason}`)] });
+    const reason = args.slice(1).join(' ') || 'No reason provided';
+    const member = message.guild.members.cache.get(target.id);
 
-    const guildData = await Guild.findOne({ guildId: interaction.guild.id });
+    if (member && !member.bannable) return message.reply({ embeds: [errorEmbed('Error', 'I cannot ban this user.')] });
+
+    await message.guild.members.ban(target.id, { reason });
+    await message.reply({ embeds: [successEmbed('Member Banned', `${target} has been banned.\n**Reason:** ${reason}`)] });
+
+    const guildData = await Guild.findOne({ guildId: message.guild.id });
     if (guildData?.banLogsChannel) {
-      const log = logEmbed('🔨 Member Banned', `**User:** ${target} (${target.id})\n**Moderator:** ${interaction.user}\n**Reason:** ${reason}`, 0xe74c3c);
-      await sendLog(interaction.guild, guildData.banLogsChannel, log);
+      const log = logEmbed('🔨 Member Banned', `**User:** ${target} (${target.id})\n**Moderator:** ${message.author}\n**Reason:** ${reason}`, 0xe74c3c);
+      await sendLog(message.guild, guildData.banLogsChannel, log);
     }
   }
 };
