@@ -1,17 +1,16 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('userinfo')
-    .setDescription('Get info about a user')
-    .addUserOption(opt => opt.setName('user').setDescription('User to check').setRequired(false)),
+  name: 'userinfo',
+  description: 'Get info about a user',
+  usage: '²userinfo @user',
 
-  async execute(interaction) {
-    const target = interaction.options.getMember('user') || interaction.member;
+  async execute(message, args, client) {
+    const target = message.mentions.members.first() || message.member;
     const user = target.user;
 
     const roles = target.roles.cache
-      .filter(r => r.id !== interaction.guild.id)
+      .filter(r => r.id !== message.guild.id)
       .sort((a, b) => b.position - a.position)
       .map(r => `${r}`)
       .slice(0, 10)
@@ -28,9 +27,9 @@ export default {
         { name: '📥 Joined Server', value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:R>`, inline: true },
         { name: '🎭 Roles', value: roles },
       )
-      .setFooter({ text: `${interaction.guild.name}` })
+      .setFooter({ text: message.guild.name })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
