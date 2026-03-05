@@ -1,31 +1,28 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import User from '../../models/User.js';
+import { errorEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('coinflip')
-    .setDescription('Flip a coin and bet your coins!')
-    .addIntegerOption(opt => opt.setName('amount').setDescription('Amount to bet').setRequired(true).setMinValue(1))
-    .addStringOption(opt => opt.setName('side').setDescription('heads or tails').setRequired(true)
-      .addChoices(
-        { name: '🪙 Heads', value: 'heads' },
-        { name: '🪙 Tails', value: 'tails' }
-      )),
+  name: 'coinflip',
+  description: 'Flip a coin and bet your coins',
+  usage: '²coinflip [amount] [heads/tails]',
 
-  async execute(interaction) {
-    const amount = interaction.options.getInteger('amount');
-    const side = interaction.options.getString('side');
+  async execute(message, args, client) {
+    const amount = parseInt(args[0]);
+    const side = args[1]?.toLowerCase();
 
-    const userData = await User.findOne({ userId: interaction.user.id, guildId: interaction.guild.id });
-    if (!userData || userData.coins < amount) {
-      return interaction.reply({ content: '❌ You don\'t have enough coins!', ephemeral: true });
-    }
+    if (!amount || amount < 1) return message.reply({ embeds: [errorEmbed('Error', 'Please provide a valid amount!')] });
+    if (!['heads', 'tails'].includes(side)) return message.reply({ embeds: [errorEmbed('Error', 'Choose `heads` or `tails`!')] });
+
+    const userData = await User.findOne({ userId: message.author.id, guildId: message.guild.id });
+    if (!userData || userData.coins < amount)
+      return message.reply({ content: '❌ You don\'t have enough coins!' });
 
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const won = result === side;
 
     await User.findOneAndUpdate(
-      { userId: interaction.user.id, guildId: interaction.guild.id },
+      { userId: message.author.id, guildId: message.guild.id },
       { $inc: { coins: won ? amount : -amount } }
     );
 
@@ -35,6 +32,6 @@ export default {
       .setDescription(`The coin landed on **${result}**!\n\n${won ? `✅ You won **${amount}** coins!` : `❌ You lost **${amount}** coins!`}`)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
