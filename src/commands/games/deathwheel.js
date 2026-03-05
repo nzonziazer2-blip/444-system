@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 const punishments = [
   'You must speak only in questions for 5 minutes!',
@@ -14,19 +14,19 @@ const punishments = [
 ];
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('deathwheel')
-    .setDescription('Spin the wheel of death and face your punishment!'),
+  name: 'deathwheel',
+  description: 'Spin the wheel of death',
+  usage: '²deathwheel',
 
-  async execute(interaction) {
+  async execute(message, args, client) {
     const result = punishments[Math.floor(Math.random() * punishments.length)];
 
     const embed = new EmbedBuilder()
       .setColor(0xe74c3c)
       .setTitle('☠️ Wheel of Death')
-      .setDescription(`${interaction.user} spun the wheel...\n\n**Result:** ${result}`)
+      .setDescription(`${message.author} spun the wheel...\n\n**Result:** ${result}`)
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
