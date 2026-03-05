@@ -1,71 +1,62 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
 import Guild from '../../models/Guild.js';
 import { successEmbed, errorEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('selfroles')
-    .setDescription('Manage self roles')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand(sub => sub
-      .setName('add')
-      .setDescription('Add a self role')
-      .addRoleOption(opt => opt.setName('role').setDescription('The role').setRequired(true))
-      .addStringOption(opt => opt.setName('label').setDescription('Button label').setRequired(true))
-      .addStringOption(opt => opt.setName('emoji').setDescription('Button emoji').setRequired(false)))
-    .addSubcommand(sub => sub
-      .setName('remove')
-      .setDescription('Remove a self role')
-      .addRoleOption(opt => opt.setName('role').setDescription('The role to remove').setRequired(true)))
-    .addSubcommand(sub => sub
-      .setName('send')
-      .setDescription('Send the self roles panel')
-      .addChannelOption(opt => opt.setName('channel').setDescription('Channel to send panel').setRequired(true))),
+  name: 'selfroles',
+  description: 'Manage self roles',
+  usage: '²selfroles add/remove/send',
 
-  async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.Administrator))
+      return message.reply({ embeds: [errorEmbed('Error', 'You need Administrator permission!')] });
+
+    const sub = args[0]?.toLowerCase();
 
     if (sub === 'add') {
-      const role = interaction.options.getRole('role');
-      const label = interaction.options.getString('label');
-      const emoji = interaction.options.getString('emoji') || null;
+      const role = message.mentions.roles.first();
+      const label = args[2];
+      const emoji = args[3] || null;
+
+      if (!role) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a role!')] });
+      if (!label) return message.reply({ embeds: [errorEmbed('Error', 'Please provide a label!')] });
 
       await Guild.findOneAndUpdate(
-        { guildId: interaction.guild.id },
+        { guildId: message.guild.id },
         { $push: { selfRoles: { roleId: role.id, label, emoji } } },
         { upsert: true }
       );
 
-      return interaction.reply({ embeds: [successEmbed('Self Role Added', `${role} added with label **${label}**`)] });
+      return message.reply({ embeds: [successEmbed('Self Role Added', `${role} added with label **${label}**`)] });
     }
 
     if (sub === 'remove') {
-      const role = interaction.options.getRole('role');
+      const role = message.mentions.roles.first();
+      if (!role) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a role!')] });
 
       await Guild.findOneAndUpdate(
-        { guildId: interaction.guild.id },
+        { guildId: message.guild.id },
         { $pull: { selfRoles: { roleId: role.id } } }
       );
 
-      return interaction.reply({ embeds: [successEmbed('Self Role Removed', `${role} has been removed from self roles.`)] });
+      return message.reply({ embeds: [successEmbed('Self Role Removed', `${role} removed from self roles.`)] });
     }
 
     if (sub === 'send') {
-      const channel = interaction.options.getChannel('channel');
-      const guildData = await Guild.findOne({ guildId: interaction.guild.id });
+      const channel = message.mentions.channels.first();
+      if (!channel) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a channel!')] });
 
-      if (!guildData?.selfRoles?.length) {
-        return interaction.reply({ embeds: [errorEmbed('Error', 'No self roles configured. Use `/selfroles add` first.')], ephemeral: true });
-      }
+      const guildData = await Guild.findOne({ guildId: message.guild.id });
+      if (!guildData?.selfRoles?.length)
+        return message.reply({ embeds: [errorEmbed('Error', 'No self roles configured. Use `²selfroles add` first.')] });
 
       const embed = new EmbedBuilder()
         .setColor(0x3498db)
         .setTitle('🎭 Self Roles')
         .setDescription('Click a button below to get or remove a role!')
-        .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
+        .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() })
         .setTimestamp();
 
-      // Split into rows of 5 buttons max
       const rows = [];
       for (let i = 0; i < guildData.selfRoles.length; i += 5) {
         const chunk = guildData.selfRoles.slice(i, i + 5);
@@ -83,7 +74,7 @@ export default {
       }
 
       await channel.send({ embeds: [embed], components: rows });
-      return interaction.reply({ embeds: [successEmbed('Panel Sent', `Self roles panel sent to ${channel}`)], ephemeral: true });
+      return message.reply({ embeds: [successEmbed('Panel Sent', `Self roles panel sent to ${channel}`)] });
     }
   }
 };
