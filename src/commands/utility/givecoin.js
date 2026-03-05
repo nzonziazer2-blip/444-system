@@ -1,25 +1,28 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import User from '../../models/User.js';
 import { successEmbed, errorEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('givecoin')
-    .setDescription('Give coins to a member')
-    .addUserOption(opt => opt.setName('user').setDescription('User to give coins').setRequired(true))
-    .addIntegerOption(opt => opt.setName('amount').setDescription('Amount of coins').setRequired(true).setMinValue(1))
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+  name: 'givecoin',
+  description: 'Give coins to a member',
+  usage: '²givecoin @user [amount]',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user');
-    const amount = interaction.options.getInteger('amount');
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.Administrator))
+      return message.reply({ embeds: [errorEmbed('Error', 'You need Administrator permission!')] });
+
+    const target = message.mentions.users.first();
+    if (!target) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a user!')] });
+
+    const amount = parseInt(args[1]);
+    if (!amount || amount < 1) return message.reply({ embeds: [errorEmbed('Error', 'Please provide a valid amount!')] });
 
     await User.findOneAndUpdate(
-      { userId: target.id, guildId: interaction.guild.id },
+      { userId: target.id, guildId: message.guild.id },
       { $inc: { coins: amount } },
       { upsert: true }
     );
 
-    await interaction.reply({ embeds: [successEmbed('Coins Given', `${target} received **${amount}** coins!`)] });
+    await message.reply({ embeds: [successEmbed('Coins Given', `${target} received **${amount}** coins!`)] });
   }
 };
