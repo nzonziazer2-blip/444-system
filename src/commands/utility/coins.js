@@ -1,15 +1,14 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import User from '../../models/User.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('coins')
-    .setDescription('Check your coins balance')
-    .addUserOption(opt => opt.setName('user').setDescription('User to check').setRequired(false)),
+  name: 'coins',
+  description: 'Check your coins balance',
+  usage: '²coins @user',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user') || interaction.user;
-    const userData = await User.findOne({ userId: target.id, guildId: interaction.guild.id });
+  async execute(message, args, client) {
+    const target = message.mentions.users.first() || message.author;
+    const userData = await User.findOne({ userId: target.id, guildId: message.guild.id });
 
     const embed = new EmbedBuilder()
       .setColor(0xf1c40f)
@@ -18,6 +17,6 @@ export default {
       .setThumbnail(target.displayAvatarURL({ dynamic: true }))
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed] });
   }
 };
