@@ -1,24 +1,29 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
-const games = new Map();
+const xoGames = new Map();
 
-function createBoard() {
-  return Array(9).fill(null);
-}
+export default {
+  name: 'xo',
+  description: 'Play Tic Tac Toe against the bot',
+  usage: '²xo',
 
-function checkWinner(board) {
-  const lines = [
-    [0,1,2],[3,4,5],[6,7,8],
-    [0,3,6],[1,4,7],[2,5,8],
-    [0,4,8],[2,4,6]
-  ];
-  for (const [a,b,c] of lines) {
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  async execute(message, args, client) {
+    const board = Array(9).fill(null);
+    xoGames.set(message.author.id, { board });
+
+    const rows = buildRows(board);
+    const embed = new EmbedBuilder()
+      .setColor(0x3498db)
+      .setTitle('❌⭕ Tic Tac Toe')
+      .setDescription('Your turn! You are **X**');
+
+    await message.reply({ embeds: [embed], components: rows });
   }
-  return null;
-}
+};
 
-function buildComponents(board, disabled = false) {
+export function getXOGames() { return xoGames; }
+
+function buildRows(board, disabled = false) {
   const rows = [];
   for (let i = 0; i < 3; i++) {
     const row = new ActionRowBuilder();
@@ -37,21 +42,3 @@ function buildComponents(board, disabled = false) {
   }
   return rows;
 }
-
-export default {
-  data: new SlashCommandBuilder()
-    .setName('xo')
-    .setDescription('Play Tic Tac Toe against the bot'),
-
-  async execute(interaction) {
-    const board = createBoard();
-    games.set(interaction.user.id, { board, turn: 'X' });
-
-    const embed = new EmbedBuilder()
-      .setColor(0x3498db)
-      .setTitle('❌⭕ Tic Tac Toe')
-      .setDescription('Your turn! You are **X**');
-
-    await interaction.reply({ embeds: [embed], components: buildComponents(board) });
-  }
-};
