@@ -1,29 +1,32 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import Guild from '../../models/Guild.js';
 import { sendLog, successEmbed, errorEmbed, logEmbed } from '../../utils/helpers.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('move')
-    .setDescription('Move a member to another voice channel')
-    .addUserOption(opt => opt.setName('user').setDescription('The user to move').setRequired(true))
-    .addChannelOption(opt => opt.setName('channel').setDescription('The voice channel to move to').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers),
+  name: 'move',
+  description: 'Move a member to another voice channel',
+  usage: '²move @user [channel name]',
 
-  async execute(interaction) {
-    const target = interaction.options.getUser('user');
-    const channel = interaction.options.getChannel('channel');
-    const member = interaction.guild.members.cache.get(target.id);
+  async execute(message, args, client) {
+    if (!message.member.permissions.has(PermissionFlagsBits.MoveMembers))
+      return message.reply({ embeds: [errorEmbed('Error', 'You don\'t have permission!')] });
 
-    if (!member?.voice.channel) return interaction.reply({ embeds: [errorEmbed('Error', 'User is not in a voice channel.')], ephemeral: true });
+    const target = message.mentions.members.first();
+    if (!target) return message.reply({ embeds: [errorEmbed('Error', 'Please mention a user!')] });
 
-    await member.voice.setChannel(channel);
-    await interaction.reply({ embeds: [successEmbed('Member Moved', `${target} has been moved to ${channel}.`)] });
+    const channelName = args.slice(1).join(' ');
+    const channel = message.guild.channels.cache.find(c => c.name.toLowerCase() === channelName.toLowerCase() && c.type === 2);
 
-    const guildData = await Guild.findOne({ guildId: interaction.guild.id });
+    if (!channel) return message.reply({ embeds: [errorEmbed('Error', 'Voice channel not found!')] });
+    if (!target.voice.channel) return message.reply({ embeds: [errorEmbed('Error', 'User is not in a voice channel.')] });
+
+    await target.voice.setChannel(channel);
+    await message.reply({ embeds: [successEmbed('Member Moved', `${target.user} has been moved to **${channel.name}**.`)] });
+
+    const guildData = await Guild.findOne({ guildId: message.guild.id });
     if (guildData?.moveLogsChannel) {
-      const log = logEmbed('🔀 Member Moved', `**User:** ${target}\n**Moderator:** ${interaction.user}\n**Channel:** ${channel}`, 0x1abc9c);
-      await sendLog(interaction.guild, guildData.moveLogsChannel, log);
+      const log = logEmbed('🔀 Member Moved', `**User:** ${target.user}\n**Moderator:** ${message.author}\n**Channel:** ${channel.name}`, 0x1abc9c);
+      await sendLog(message.guild, guildData.moveLogsChannel, log);
     }
   }
 };
